@@ -1,0 +1,16 @@
+# === Rust / Cargo ===
+target/
+**/*.rs.bk
+
+# === VSCode ===
+.vscode/
+*.code-workspace
+
+# === Logs, backups, etc. ===
+*.log
+*.tmp
+*.swp
+
+# === OS-specific ===
+.DS_Store
+Thumbs.db
