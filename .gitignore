@@ -14,3 +14,9 @@ target/
 # === OS-specific ===
 .DS_Store
 Thumbs.db
+
+# === SDL2 ===
+*.zip
+/lib/
+/include/
+/bin/
