@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 use crate::package::install;
 use crate::file::clean_lib;
 use crate::package::update;
+use crate::package::init_package;
 
 #[derive(Parser)]
 #[command(name = "sdlpkg", version = "1.0", author = "Nid77", about = "SDL Package Manager")]
@@ -14,6 +15,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    Init,
     Install,
     Remove,
     Update,
@@ -24,6 +26,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Init => {
+            println!("Initializing...");
+            init_package()?;
+        }
         Commands::Install => {
             println!("Installing...");
             install()?;

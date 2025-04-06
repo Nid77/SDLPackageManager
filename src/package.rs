@@ -64,6 +64,30 @@ pub fn update_package(libs: &SdlConfig) -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
+pub fn init_package() -> Result<(), Box<dyn std::error::Error>> {
+    let latest_release = get_latest_release("SDL")?;
+    let version_parts: Vec<&str> = latest_release.split('-').collect();
+
+    let libs: SdlConfig = SdlConfig {
+        version: "1.0.0".to_string(),
+        sdl: SdlSection {
+            arch: get_architecture(),
+            libs: vec![
+                LibEntry {
+                    name: "SDL".to_string(),
+                    status: version_parts[0].to_string(),
+                    version: version_parts[1].to_string()
+                }
+            ],
+        },
+    };
+    let json = serde_json::to_string_pretty(&libs)?;
+    fs::write("sdlpkg.json", json)?;
+    println!("Created sdlpkg.json.");
+
+    Ok(())
+}
+
 
 fn get_url_format(lib_name: &str, status: &str, version: &str, zip_path: &str) -> String {
     format!(
