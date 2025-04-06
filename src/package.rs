@@ -1,15 +1,13 @@
-use std::collections::HashMap;
 use std::fs;
-use reqwest::blocking::Client;
+use clap::ValueEnum;
 use serde::Deserialize;
 use serde::Serialize;
-use crate::file::init;
-use crate::file::cleanup;
 use crate::file::copy_file;
 use crate::file::copy_dir_recursive;
 use crate::file::DEST_DIR;
 use crate::file::download_and_extract;
-use std::io::{self, Write};
+use crate::services::get_url_format;
+use crate::services::get_latest_release;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SdlConfig {
@@ -87,18 +85,68 @@ pub fn init_package() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
-fn get_url_format(lib_name: &str, status: &str, version: &str, zip_path: &str) -> String {
-    format!(
-        "https://github.com/libsdl-org/{}/releases/download/{}-{}/{}",
-        lib_name, status, version, zip_path
-    )
+pub fn check_libs(libs: &SdlConfig) -> Result<(), Box<dyn std::error::Error>> {
+    match SUPPORTED_VERSIONS.contains(&libs.version.as_str()) {
+        true => {}
+        false => {
+            return Err(format!("Unsupported version: {}", libs.version).into());
+        }
+    }
+    
+    for lib in &libs.sdl.libs {
+        if !SUPPORTED_LIBS.contains(&lib.name.as_str()) {
+            return Err(format!("Unsupported library: {}", lib.name).into());
+        }
+    }
+    Ok(())
 }
 
 
-fn process_installation(libs: &SdlConfig ) -> Result<(), Box<dyn std::error::Error>> {
+fn copy_dll(extract_dir: &str, name_sdl: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let dll_path = format!("{extract_dir}\\{name_sdl}.dll");
+    let target_dll = format!("{DEST_DIR}\\bin\\{name_sdl}.dll");
+    match copy_file(&dll_path, &target_dll) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error copying file: {}", e),
+    }
+    Ok(())
+}
+
+fn copy_include(extract_dir: &str, true_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let include_src = format!("{extract_dir}-VC\\{true_name}\\include");
+    let include_dst = format!("{DEST_DIR}");
+    match copy_dir_recursive(&include_src, &include_dst) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error copying directory: {}", e),
+    }
+    Ok(())
+}
+
+fn copy_lib(extract_dir: &str, true_name: &str, arch: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let lib_src = format!("{extract_dir}-VC\\{true_name}\\lib\\{arch}");
+        let lib_dst = format!("{DEST_DIR}\\lib");
+        match  copy_dir_recursive(&lib_src, &lib_dst) {
+            Ok(_) => {}
+            Err(e) => eprintln!("Error copying directory: {}", e),
+        }
+    Ok(())
+}
+
+pub struct SdlInstallation {
+    pub libs: SdlConfig,
+    pub only: Vec<LibTag>,
+}
+
+#[derive(Clone, Debug, ValueEnum, PartialEq)]
+pub enum LibTag {
+    Dll,
+    Include,
+    Lib,
+}
+
+pub fn process_installation(param: &SdlInstallation) -> Result<(), Box<dyn std::error::Error>> {
     let arch = get_architecture();
-    for lib in &libs.sdl.libs {
+    for lib in &param.libs.sdl.libs {
         let lib_name = &lib.name;
         let version = &lib.version;
         let status = &lib.status;
@@ -133,109 +181,39 @@ fn process_installation(libs: &SdlConfig ) -> Result<(), Box<dyn std::error::Err
         )?;
 
         //COPY
-        let dll_path = format!("{extract_dir}\\{name_sdl}.dll");
-        let target_dll = format!("{DEST_DIR}\\bin\\{name_sdl}.dll");
-        match copy_file(&dll_path, &target_dll) {
-            Ok(_) => {}
-            Err(e) => eprintln!("Error copying file: {}", e),
+        if param.only.is_empty() || param.only.contains(&LibTag::Include) {
+            copy_include(&extract_dir, &true_name)?;
+        }
+        if param.only.is_empty() || param.only.contains(&LibTag::Lib) {
+            copy_lib(&extract_dir, &true_name, &arch)?;
+        }
+        if param.only.is_empty() || param.only.contains(&LibTag::Dll) {
+            copy_dll(&extract_dir, &name_sdl)?;
         }
 
-        let include_src = format!("{extract_dir}-VC\\{true_name}\\include");
-        let include_dst = format!("{DEST_DIR}");
-        match copy_dir_recursive(&include_src, &include_dst) {
-            Ok(_) => {}
-            Err(e) => eprintln!("Error copying directory: {}", e),
-        }
-
-        let lib_src = format!("{extract_dir}-VC\\{true_name}\\lib\\{arch}");
-        let lib_dst = format!("{DEST_DIR}\\lib");
-        match  copy_dir_recursive(&lib_src, &lib_dst) {
-            Ok(_) => {}
-            Err(e) => eprintln!("Error copying directory: {}", e),
-        }
-
-        
     }
     Ok(())
 }
 
-fn check_libs(libs: &SdlConfig) -> Result<(), Box<dyn std::error::Error>> {
-    match SUPPORTED_VERSIONS.contains(&libs.version.as_str()) {
-        true => {}
-        false => {
-            return Err(format!("Unsupported version: {}", libs.version).into());
-        }
-    }
-    
-    for lib in &libs.sdl.libs {
-        if !SUPPORTED_LIBS.contains(&lib.name.as_str()) {
-            return Err(format!("Unsupported library: {}", lib.name).into());
-        }
-    }
-    Ok(())
-}
-
-pub fn install() -> Result<(), Box<dyn std::error::Error>> {
+pub fn get_lib(lib_name: &str) -> Option<LibEntry> {
     let libs: SdlConfig = get_sdl_config();
-    check_libs(&libs)?;
-
-    init()?;
-    process_installation(&libs)?;
-    cleanup()?;
-
-    Ok(())
-}
-
-
-#[derive(Debug, Deserialize)]
-struct GithubRelease {
-    tag_name: String,
-}
-
-pub fn get_latest_release(repo: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let url = format!("https://api.github.com/repos/libsdl-org/{}/releases/latest", repo);
-    let client = Client::new();
-
-    let res = client
-        .get(&url)
-        .header("User-Agent", "sdlpkg-manager") 
-        .send()?
-        .json::<GithubRelease>()?;
-
-    Ok(res.tag_name)
-}
-
-
-pub fn update() -> Result<(), Box<dyn std::error::Error>> {
-    let libs: SdlConfig = get_sdl_config();
-    check_libs(&libs)?;
-    let mut versions = HashMap::new();
+    let mut new_lib: Option<LibEntry> = None;
     for lib in &libs.sdl.libs {
-        let v = get_latest_release(&lib.name)?;
-        versions.insert(lib.name.clone(), v.clone());
-        println!("{} latest version - {} ", lib.name, v);
+        if lib.name == lib_name {
+            new_lib = Some(lib.clone());
+            break;
+        }
     }
+   
+    if new_lib.is_none() && SUPPORTED_LIBS.contains(&lib_name) {
+        let latest_release = get_latest_release(lib_name).unwrap();
+        let v: Vec<&str> = latest_release.split('-').collect();
 
-    print!("➡️  Do you want to update all libs? (y/n): ");
-    io::stdout().flush().unwrap();
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-    let input = input.trim();
-
-    if input != "y" {
-        println!("Abandon");
-        return Ok(());
-    }
-
-    println!("Updating...");
-    let mut updated_libs = libs.clone();
-    for lib in &mut updated_libs.sdl.libs {
-        let version_parts: Vec<&str> = versions.get(&lib.name).unwrap().split('-').collect();
-        lib.version = version_parts[1].to_string();
-        lib.status = version_parts[0].to_string();
-    }
-    update_package(&updated_libs)?;
-
-    Ok(())
+        new_lib = Some(LibEntry {
+            name: lib_name.to_string(),
+            status: v[0].to_string(),
+            version: v[1].to_string(),
+        });
+    } 
+    new_lib
 }
-
