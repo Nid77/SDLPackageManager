@@ -3,6 +3,7 @@ mod file;
 use clap::{Parser, Subcommand};
 use crate::package::install;
 use crate::file::clean_lib;
+use crate::package::update;
 
 #[derive(Parser)]
 #[command(name = "sdlpkg", version = "1.0", author = "Nid77", about = "SDL Package Manager")]
@@ -33,6 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Update => {
             println!("Updating...");
+            update()?;
         }
     }
     Ok(())

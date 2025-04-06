@@ -1,29 +1,28 @@
 {
-    "version": "1.0.0",
-    "sdl": {
-      "arch": "auto",
-      "libs": [
-        {
-          "name": "SDL",
-          "channel": "release",
-          "version": "3.2.2"
-        },
-        {
-          "name": "SDL_image",
-          "channel": "release",
-          "version": "3.2.0"
-        },
-        {
-          "name": "SDL_mixer",
-          "channel": "release",
-          "version": "2.8.0"
-        },
-        {
-          "name": "SDL_ttf",
-          "channel": "preview",
-          "version": "3.1.0"
-        }
-      ]
-    }
+  "version": "1.0.0",
+  "sdl": {
+    "arch": "auto",
+    "libs": [
+      {
+        "name": "SDL",
+        "status": "release",
+        "version": "3.2.10"
+      },
+      {
+        "name": "SDL_image",
+        "status": "release",
+        "version": "3.2.4"
+      },
+      {
+        "name": "SDL_mixer",
+        "status": "release",
+        "version": "2.8.1"
+      },
+      {
+        "name": "SDL_ttf",
+        "status": "release",
+        "version": "3.2.2"
+      }
+    ]
   }
-  
+}
