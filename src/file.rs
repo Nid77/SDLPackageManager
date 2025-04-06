@@ -1,7 +1,7 @@
 
 use reqwest::blocking::get;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{self};
 use std::path::Path;
 use fs_extra::dir::{copy, CopyOptions};
 use std::error::Error;
@@ -33,6 +33,13 @@ pub fn cleanup() -> Result<(), Box<dyn std::error::Error>> {
     if Path::new(TMP_PATH).exists() {
         std::fs::remove_dir_all(TMP_PATH)?;
     }
+    Ok(())
+}
+
+pub fn clean_lib() -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::remove_dir_all(&format!("{}/bin", DEST_DIR))?;
+    std::fs::remove_dir_all(&format!("{}/lib", DEST_DIR))?;
+    std::fs::remove_dir_all(&format!("{}/include", DEST_DIR))?;
     Ok(())
 }
 
@@ -82,6 +89,24 @@ pub fn copy_dir_recursive(src: &str, dest: &str) -> Result<(), Box<dyn Error>> {
     options.overwrite = true;
     options.copy_inside = true;
     copy(TMP_PATH.to_owned()+src, dest, &options)?;
+
+    Ok(())
+}
+
+pub fn download_and_extract(
+    url: &str,
+    zip_file: &str,
+    extract_dir: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match download_file(url, zip_file) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error downloading file: {}", e),
+    }
+
+    match extract_zip(zip_file, extract_dir) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error extracting zip: {}", e),
+    }
 
     Ok(())
 }
