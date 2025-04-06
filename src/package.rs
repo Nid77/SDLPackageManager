@@ -30,7 +30,6 @@ pub struct LibEntry {
     pub version: String,
 }
 
-
 pub const SUPPORTED_LIBS: &[&str] = &[
     "SDL",
     "SDL_image",
@@ -142,7 +141,7 @@ fn process_installation(libs: &SdlConfig ) -> Result<(), Box<dyn std::error::Err
         }
 
         let include_src = format!("{extract_dir}-VC\\{true_name}\\include");
-        let include_dst = format!("{DEST_DIR}\\include");
+        let include_dst = format!("{DEST_DIR}");
         match copy_dir_recursive(&include_src, &include_dst) {
             Ok(_) => {}
             Err(e) => eprintln!("Error copying directory: {}", e),
