@@ -30,8 +30,11 @@ pub enum Commands {
         #[arg(long, value_enum, value_parser, num_args = 1..)]
         only: Vec<LibTag>,
     },
-    Remove,
+    Clean,
     Update,
+    Uninstall{
+        lib: Option<String>,
+    }
 }
 
 
@@ -66,13 +69,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             install(param)?;
 
         }
-        Commands::Remove => {
-            println!("Removing...");
+        Commands::Clean => {
+            println!("Cleaning...");
             clean_lib()?;
         }
         Commands::Update => {
             println!("Updating...");
             update()?;
+        }
+        Commands::Uninstall { lib } => {
+            println!("Uninstalling...");
+            if let Some(lib) = lib {
+                let mut libs: SdlConfig = get_sdl_config();
+                libs.sdl.libs.retain(|l| l.name != lib);
+                update_package(&libs)?;
+            } else {
+                println!("Lib not found");
+            }
         }
     }
     Ok(())
