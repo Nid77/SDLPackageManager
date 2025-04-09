@@ -14,6 +14,7 @@ use crate::package::get_sdl_config;
 use std::collections::HashMap;
 use std::io::{self, Write};
 
+
 #[derive(Parser)]
 #[command(name = "sdlpkg", version = "1.0", author = "Nid77", about = "SDL Package Manager")]
 pub struct Cli {

@@ -7,9 +7,21 @@ use fs_extra::dir::{copy, CopyOptions};
 use std::error::Error;
 use std::fs;
 use std::process;
+use std::path::{PathBuf, MAIN_SEPARATOR};
 
 pub const TMP_PATH: &str = ".\\tmp\\";
 pub const DEST_DIR: &str = ".";
+
+#[macro_export]
+macro_rules! path {
+    ($($seg:expr),+ $(,)?) => {{
+        let mut p = std::path::PathBuf::from(crate::file::TMP_PATH);
+        $( p.push($seg); )+
+        p
+    }};
+}
+
+
 
 fn create_dir_if_not_exists(path: &str) {
     if !Path::new(path).exists() {
@@ -44,8 +56,8 @@ pub fn clean_lib() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn download_file(url: &str, destination: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if Path::new(&(TMP_PATH.to_owned()+destination)).exists() {
-        return Err(format!("file {} already exist", destination).into());
+    if Path::new(&(path!(destination))).exists() {
+        return Err(format!("file {:?} already exists", path!(destination)).into());
     }
 
     println!("Downloading {} to {}", url, destination);
@@ -53,33 +65,33 @@ pub fn download_file(url: &str, destination: &str) -> Result<(), Box<dyn std::er
     if !response.status().is_success() {
         return Err(format!("Failed to download file: {}", response.status()).into());
     }
-    let mut file = File::create(TMP_PATH.to_owned()+destination).expect("failed to create file");
+    let mut file = File::create(path!(destination)).expect("failed to create file");
     io::copy(&mut response, &mut file)?;
     Ok(())
 }
 
 pub fn extract_zip(zip_path: &str, extract_to: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if Path::new(&(TMP_PATH.to_owned()+extract_to)).exists() {
-        return Err(format!("directory {} already exist", TMP_PATH.to_owned()+extract_to).into());
+    if Path::new(&(path!(extract_to))).exists() {
+        return Err(format!("directory {} already exists", path!(extract_to).display()).into());
     } 
 
-    if !Path::new(&(TMP_PATH.to_owned()+zip_path)).exists() {
-        return Err(format!("file {} not found", TMP_PATH.to_owned()+zip_path).into());
+    if !Path::new(&(path!(zip_path))).exists() {
+        return Err(format!("file {} not found", path!(zip_path).display()).into());
     }
 
-    println!("Extracting {} to {}", TMP_PATH.to_owned()+zip_path, TMP_PATH.to_owned()+extract_to);
-    let zip_file = File::open(TMP_PATH.to_owned()+zip_path)?;
+    println!("Extracting {:?} to {:?}", path!(zip_path), path!(extract_to));
+    let zip_file = File::open(path!(zip_path))?;
     let mut archive = zip::ZipArchive::new(zip_file)?;
-    archive.extract(TMP_PATH.to_owned()+extract_to)?;
+    archive.extract(path!(extract_to))?;
     
     Ok(())
 }
 
 pub fn copy_file(src: &str, dest: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if !Path::new(&(TMP_PATH.to_owned()+src)).exists() {
-        return Err(format!("file {} not found", TMP_PATH.to_owned()+src).into());  
+    if !Path::new(&(path!(src))).exists() {
+        return Err(format!("file {} not found", path!(src).display()).into());  
     } 
-    std::fs::copy(TMP_PATH.to_owned()+src, dest)?;
+    std::fs::copy(path!(src), dest)?;
     Ok(())
 
 }
@@ -88,7 +100,7 @@ pub fn copy_dir_recursive(src: &str, dest: &str) -> Result<(), Box<dyn Error>> {
     let mut options = CopyOptions::new();
     options.overwrite = true;
     options.copy_inside = true;
-    copy(TMP_PATH.to_owned()+src, dest, &options)?;
+    copy(path!(src), dest, &options)?;
 
     Ok(())
 }
@@ -106,6 +118,49 @@ pub fn download_and_extract(
     match extract_zip(zip_file, extract_dir) {
         Ok(_) => {}
         Err(e) => eprintln!("Error extracting zip: {}", e),
+    }
+
+    Ok(())
+}
+
+
+
+pub fn copy_dll(extract_dir: &str, name_sdl: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let dll_path = PathBuf::from(extract_dir).join(format!("{name_sdl}.dll"));
+    let target_dll = PathBuf::from(DEST_DIR).join("bin").join(format!("{name_sdl}.dll"));
+    
+    match copy_file(dll_path.to_str().unwrap(), target_dll.to_str().unwrap()) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error copying file: {}", e),
+    }
+
+    Ok(())
+}
+
+pub fn copy_include(extract_dir: &str, true_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let include_src = PathBuf::from(format!("{extract_dir}-VC"))
+        .join(true_name)
+        .join("include");
+    let include_dst = PathBuf::from(DEST_DIR);
+
+    match copy_dir_recursive(include_src.to_str().unwrap(), include_dst.to_str().unwrap()) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error copying directory: {}", e),
+    }
+
+    Ok(())
+}
+
+pub fn  copy_lib(extract_dir: &str, true_name: &str, arch: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let lib_src = PathBuf::from(format!("{extract_dir}-VC"))
+        .join(true_name)
+        .join("lib")
+        .join(arch);
+    let lib_dst = PathBuf::from(DEST_DIR).join("lib");
+
+    match copy_dir_recursive(lib_src.to_str().unwrap(), lib_dst.to_str().unwrap()) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Error copying directory: {}", e),
     }
 
     Ok(())

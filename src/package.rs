@@ -2,10 +2,7 @@ use std::fs;
 use clap::ValueEnum;
 use serde::Deserialize;
 use serde::Serialize;
-use crate::file::copy_file;
-use crate::file::copy_dir_recursive;
-use crate::file::DEST_DIR;
-use crate::file::download_and_extract;
+use crate::file::{copy_dll, copy_include, copy_lib, download_and_extract};
 use crate::services::get_url_format;
 use crate::services::get_latest_release;
 
@@ -26,6 +23,18 @@ pub struct LibEntry {
     pub name: String,
     pub status: String,
     pub version: String,
+}
+
+pub struct SdlInstallation {
+    pub libs: SdlConfig,
+    pub only: Vec<LibTag>,
+}
+
+#[derive(Clone, Debug, ValueEnum, PartialEq)]
+pub enum LibTag {
+    Dll,
+    Include,
+    Lib,
 }
 
 pub const SUPPORTED_LIBS: &[&str] = &[
@@ -85,6 +94,29 @@ pub fn init_package() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+pub fn get_lib(lib_name: &str) -> Option<LibEntry> {
+    let libs: SdlConfig = get_sdl_config();
+    let mut new_lib: Option<LibEntry> = None;
+    for lib in &libs.sdl.libs {
+        if lib.name == lib_name {
+            new_lib = Some(lib.clone());
+            break;
+        }
+    }
+   
+    if new_lib.is_none() && SUPPORTED_LIBS.contains(&lib_name) {
+        let latest_release = get_latest_release(lib_name).unwrap();
+        let v: Vec<&str> = latest_release.split('-').collect();
+
+        new_lib = Some(LibEntry {
+            name: lib_name.to_string(),
+            status: v[0].to_string(),
+            version: v[1].to_string(),
+        });
+    } 
+    new_lib
+}
+
 pub fn check_libs(libs: &SdlConfig) -> Result<(), Box<dyn std::error::Error>> {
     match SUPPORTED_VERSIONS.contains(&libs.version.as_str()) {
         true => {}
@@ -99,49 +131,6 @@ pub fn check_libs(libs: &SdlConfig) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
-}
-
-
-fn copy_dll(extract_dir: &str, name_sdl: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let dll_path = format!("{extract_dir}\\{name_sdl}.dll");
-    let target_dll = format!("{DEST_DIR}\\bin\\{name_sdl}.dll");
-    match copy_file(&dll_path, &target_dll) {
-        Ok(_) => {}
-        Err(e) => eprintln!("Error copying file: {}", e),
-    }
-    Ok(())
-}
-
-fn copy_include(extract_dir: &str, true_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let include_src = format!("{extract_dir}-VC\\{true_name}\\include");
-    let include_dst = format!("{DEST_DIR}");
-    match copy_dir_recursive(&include_src, &include_dst) {
-        Ok(_) => {}
-        Err(e) => eprintln!("Error copying directory: {}", e),
-    }
-    Ok(())
-}
-
-fn copy_lib(extract_dir: &str, true_name: &str, arch: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let lib_src = format!("{extract_dir}-VC\\{true_name}\\lib\\{arch}");
-        let lib_dst = format!("{DEST_DIR}\\lib");
-        match  copy_dir_recursive(&lib_src, &lib_dst) {
-            Ok(_) => {}
-            Err(e) => eprintln!("Error copying directory: {}", e),
-        }
-    Ok(())
-}
-
-pub struct SdlInstallation {
-    pub libs: SdlConfig,
-    pub only: Vec<LibTag>,
-}
-
-#[derive(Clone, Debug, ValueEnum, PartialEq)]
-pub enum LibTag {
-    Dll,
-    Include,
-    Lib,
 }
 
 pub fn process_installation(param: &SdlInstallation) -> Result<(), Box<dyn std::error::Error>> {
@@ -195,25 +184,3 @@ pub fn process_installation(param: &SdlInstallation) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-pub fn get_lib(lib_name: &str) -> Option<LibEntry> {
-    let libs: SdlConfig = get_sdl_config();
-    let mut new_lib: Option<LibEntry> = None;
-    for lib in &libs.sdl.libs {
-        if lib.name == lib_name {
-            new_lib = Some(lib.clone());
-            break;
-        }
-    }
-   
-    if new_lib.is_none() && SUPPORTED_LIBS.contains(&lib_name) {
-        let latest_release = get_latest_release(lib_name).unwrap();
-        let v: Vec<&str> = latest_release.split('-').collect();
-
-        new_lib = Some(LibEntry {
-            name: lib_name.to_string(),
-            status: v[0].to_string(),
-            version: v[1].to_string(),
-        });
-    } 
-    new_lib
-}
