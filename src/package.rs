@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::file::{copy_dll, copy_include, copy_lib, download_and_extract};
 use crate::services::get_url_format;
 use crate::services::get_latest_release;
+use strum_macros::Display;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SdlConfig {
@@ -30,9 +31,9 @@ pub struct SdlInstallation {
     pub only: Vec<LibTag>,
 }
 
-#[derive(Clone, Debug, ValueEnum, PartialEq)]
+#[derive(Clone, Debug, ValueEnum, PartialEq, Display)]
 pub enum LibTag {
-    Dll,
+    Bin,
     Include,
     Lib,
 }
@@ -176,7 +177,7 @@ pub fn process_installation(param: &SdlInstallation) -> Result<(), Box<dyn std::
         if param.only.is_empty() || param.only.contains(&LibTag::Lib) {
             copy_lib(&extract_dir, &true_name, &arch)?;
         }
-        if param.only.is_empty() || param.only.contains(&LibTag::Dll) {
+        if param.only.is_empty() || param.only.contains(&LibTag::Bin) {
             copy_dll(&extract_dir, &name_sdl)?;
         }
 
@@ -184,3 +185,10 @@ pub fn process_installation(param: &SdlInstallation) -> Result<(), Box<dyn std::
     Ok(())
 }
 
+pub fn update_lib(lib: &mut LibEntry) -> Result<(), Box<dyn std::error::Error>> {
+    let latest_v = get_latest_release(&lib.name)?;
+    let version_parts: Vec<&str> = latest_v.split('-').collect();
+    lib.version = version_parts[1].to_string();
+    lib.status = version_parts[0].to_string();
+    Ok(())
+}

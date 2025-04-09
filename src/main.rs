@@ -3,6 +3,7 @@ mod file;
 mod services;
 use clap::{Parser, Subcommand};
 use file::{cleanup, init};
+use package::update_lib;
 use package::{get_lib, update_package, LibTag, SdlConfig};
 use crate::file::clean_lib;
 use crate::package::init_package;
@@ -13,6 +14,8 @@ use crate::package::check_libs;
 use crate::package::get_sdl_config;
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::vec;
+use crate::file::DEST_DIR;
 
 
 #[derive(Parser)]
@@ -30,8 +33,13 @@ pub enum Commands {
         #[arg(long, value_enum, value_parser, num_args = 1..)]
         only: Vec<LibTag>,
     },
-    Clean,
-    Update,
+    Clean{
+        #[arg(long, value_enum, value_parser, num_args = 1..)]
+        only: Vec<LibTag>,
+    },
+    Update{
+        lib: Option<String>,
+    },
     Uninstall{
         lib: Option<String>,
     }
@@ -43,8 +51,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Commands::Init => {
-            println!("Initializing...");
             init_package()?;
+            println!("Package initialized.");
         }
         Commands::Install { lib , only } => {
             let mut libs = get_sdl_config();
@@ -52,7 +60,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(lib) = lib {
                 match get_lib(&lib) {
                     Some(lib) => {
-                        libs.sdl.libs = vec![lib];
+                        if !libs.sdl.libs.iter().any(|l| l.name == lib.name) {
+                            libs.sdl.libs.push(lib.clone());
+                            update_package(&libs)?;
+                        }
+                        libs.sdl.libs = vec![lib.clone()];
                     },
                     None => {
                         println!("Lib not found");
@@ -65,27 +77,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 libs,
                 only,
             };
-
             install(param)?;
-
         }
-        Commands::Clean => {
-            println!("Cleaning...");
-            clean_lib()?;
+        Commands::Clean { only } => {
+            if only.is_empty() {
+                clean_lib()?;
+                println!("Cleaned all libs.");
+            } else {
+                for dir in only  {
+                    std::fs::remove_dir_all(format!("{}/{}", DEST_DIR, dir.to_string().to_lowercase()))?;
+                    println!("Cleaned {}.", dir.to_string().to_lowercase());
+                }
+            }
+            
         }
-        Commands::Update => {
-            println!("Updating...");
+        Commands::Update { lib } => {
+            if let Some(lib) = lib {
+                println!("Updating {}...", lib);
+                let mut libs: SdlConfig = get_sdl_config();
+                if libs.sdl.libs.iter().any(|l| l.name == lib) {
+                    let lib = libs.sdl.libs.iter_mut().find(|l| l.name == lib).unwrap();
+                    update_lib(lib)?;
+                    update_package(&libs)?;
+                } else {
+                    println!("Lib not found");
+                }
+                return Ok(());
+            }
+           
+            println!("Updating all libs...");
             update()?;
         }
         Commands::Uninstall { lib } => {
-            println!("Uninstalling...");
+            let mut libs: SdlConfig = get_sdl_config();
             if let Some(lib) = lib {
-                let mut libs: SdlConfig = get_sdl_config();
-                libs.sdl.libs.retain(|l| l.name != lib);
-                update_package(&libs)?;
+                if libs.sdl.libs.iter().any(|l| l.name == lib) {
+                    libs.sdl.libs.retain(|l| l.name != lib);
+                    println!("Uninstalled {}.", lib);
+                } else {
+                    println!("Lib not found.");
+                    return Ok(());
+                }
+                
             } else {
-                println!("Lib not found");
+                println!("Uninstalling all libs...");
+                libs.sdl.libs.clear();
             }
+            update_package(&libs)?;
         }
     }
     Ok(())
@@ -124,9 +162,7 @@ pub fn update() -> Result<(), Box<dyn std::error::Error>> {
     println!("Updating...");
     let mut updated_libs = libs.clone();
     for lib in &mut updated_libs.sdl.libs {
-        let version_parts: Vec<&str> = versions.get(&lib.name).unwrap().split('-').collect();
-        lib.version = version_parts[1].to_string();
-        lib.status = version_parts[0].to_string();
+        update_lib(lib)?;
     }
     update_package(&updated_libs)?;
 

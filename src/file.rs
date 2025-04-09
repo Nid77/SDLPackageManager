@@ -7,7 +7,7 @@ use fs_extra::dir::{copy, CopyOptions};
 use std::error::Error;
 use std::fs;
 use std::process;
-use std::path::{PathBuf, MAIN_SEPARATOR};
+use std::path::PathBuf;
 
 pub const TMP_PATH: &str = ".\\tmp\\";
 pub const DEST_DIR: &str = ".";
