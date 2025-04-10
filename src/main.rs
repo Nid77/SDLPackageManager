@@ -1,25 +1,19 @@
 mod package;
 mod file;
 mod services;
+mod platform;
+mod installation;
 use clap::{Parser, Subcommand};
-use file::{cleanup, init};
-use package::update_lib;
-use package::{get_lib, update_package, LibTag, SdlConfig};
-use crate::file::clean_lib;
-use crate::package::init_package;
-use crate::package::process_installation;
-use crate::package::SdlInstallation;
+use file::{cleanup, init,clean_lib,DEST_DIR};
+use package::{init_package,get_lib, update_package, update_lib,LibTag, SdlConfig,get_sdl_config,check_libs};
+use crate::installation::{SdlInstallation,Installable};
 use crate::services::get_latest_release;
-use crate::package::check_libs;
-use crate::package::get_sdl_config;
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::vec;
-use crate::file::DEST_DIR;
-
 
 #[derive(Parser)]
-#[command(name = "sdlpkg", version = "1.0", author = "Nid77", about = "SDL Package Manager")]
+#[command(name = "sdlpm", version = "1.0", author = "Nid77", about = "SDL Package Manager")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -133,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 pub fn install(param: SdlInstallation) -> Result<(), Box<dyn std::error::Error>> {
     check_libs(&param.libs)?;
     init()?;
-    process_installation(&param)?;
+    param.install()?;
     cleanup()?;
     Ok(())
 }

@@ -12,7 +12,7 @@ use std::path::PathBuf;
 pub const TMP_PATH: &str = ".\\tmp\\";
 pub const DEST_DIR: &str = ".";
 
-#[macro_export]
+#[macro_export] // Make macro to use tmp_path for all files
 macro_rules! path {
     ($($seg:expr),+ $(,)?) => {{
         let mut p = std::path::PathBuf::from(crate::file::TMP_PATH);
@@ -151,7 +151,7 @@ pub fn copy_include(extract_dir: &str, true_name: &str) -> Result<(), Box<dyn st
     Ok(())
 }
 
-pub fn  copy_lib(extract_dir: &str, true_name: &str, arch: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn copy_lib(extract_dir: &str, true_name: &str, arch: &str) -> Result<(), Box<dyn std::error::Error>> {
     let lib_src = PathBuf::from(format!("{extract_dir}-VC"))
         .join(true_name)
         .join("lib")
