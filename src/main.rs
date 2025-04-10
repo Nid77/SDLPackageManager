@@ -3,6 +3,7 @@ mod file;
 mod services;
 mod platform;
 mod installation;
+mod command;
 use clap::{Parser, Subcommand};
 use file::{cleanup, init,clean_lib,DEST_DIR};
 use package::{init_package,get_lib, update_package, update_lib,LibTag, SdlConfig,get_sdl_config,check_libs};
@@ -86,9 +87,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
         }
         Commands::Update { lib } => {
+            let mut libs: SdlConfig = get_sdl_config();
             if let Some(lib) = lib {
                 println!("Updating {}...", lib);
-                let mut libs: SdlConfig = get_sdl_config();
                 if libs.sdl.libs.iter().any(|l| l.name == lib) {
                     let lib = libs.sdl.libs.iter_mut().find(|l| l.name == lib).unwrap();
                     update_lib(lib)?;
@@ -100,10 +101,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
            
             println!("Updating all libs...");
-            update()?;
+            update(&libs)?;
         }
         Commands::Uninstall { lib } => {
             let mut libs: SdlConfig = get_sdl_config();
+
             if let Some(lib) = lib {
                 if libs.sdl.libs.iter().any(|l| l.name == lib) {
                     libs.sdl.libs.retain(|l| l.name != lib);
@@ -132,9 +134,7 @@ pub fn install(param: SdlInstallation) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-pub fn update() -> Result<(), Box<dyn std::error::Error>> {
-    let libs: SdlConfig = get_sdl_config();
-    check_libs(&libs)?;
+pub fn update(libs: &SdlConfig) -> Result<(), Box<dyn std::error::Error>> {
     let mut versions = HashMap::new();
     for lib in &libs.sdl.libs {
         let v = get_latest_release(&lib.name)?;
@@ -146,9 +146,8 @@ pub fn update() -> Result<(), Box<dyn std::error::Error>> {
     io::stdout().flush().unwrap();
     let mut input = String::new();
     io::stdin().read_line(&mut input).expect("Failed to read line");
-    let input = input.trim();
 
-    if input != "y" {
+    if input.trim() != "y" {
         println!("Abandon");
         return Ok(());
     }

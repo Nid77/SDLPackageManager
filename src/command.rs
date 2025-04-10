@@ -1,6 +1,6 @@
 use std::process::{Command, exit};
 
-fn run_command(command: &str, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run_command(command: &str, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::new(command)
         .args(args)
         .output()?;
