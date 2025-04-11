@@ -34,13 +34,14 @@ impl Installable for SdlInstallation {
 
                  */
                 let build_dir = ".";
-                run_command("git",&["https://github.com/libsdl-org/SDL_mixer.git"])?; // clone
-                run_command("cd", &["SDL_mixer"])?; // cd
-                run_command("mkdir", &["build"])?; // mkdir build
-                run_command("cd", &["build"])?; // cd build
-                run_command("cmake", &[".."])?; // cmake ..
-                run_command("make", &[])?; // make
-                run_command("sudo", &["make", "install"])?; // sudo make install
+                //run_command("git",&["clone","https://github.com/libsdl-org/SDL_mixer.git"])?; // clone
+                run_command("ls", &[])?;
+                run_command("cd", &["SDL_mixer"])?;
+                run_command("mkdir", &["build"])?; 
+                run_command("cd", &["build"])?; 
+                run_command("cmake", &[".."])?; 
+                run_command("make", &[])?; 
+                run_command("sudo", &["make", "install"])?; 
                 
 
             }
