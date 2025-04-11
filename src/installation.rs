@@ -2,7 +2,7 @@ use crate::package::{Lib, LibTag, SdlConfig};
 use crate::platform::{get_architecture, Platform};
 use crate::file::{copy_dll, copy_include, copy_lib, download_and_extract};
 use crate::services::get_url_format;
-
+use crate::command::run_command;
 
 pub trait Installable {
     fn install(&self) -> Result<(), Box<dyn std::error::Error>>;
@@ -22,6 +22,27 @@ impl Installable for SdlInstallation {
                process_installation(self)?;
             }
             Platform::Linux => {
+                /*
+                
+                git clone https://github.com/libsdl-org/SDL_mixer.git
+                cd SDL_mixer
+                mkdir build && cd build
+                cmake ..
+                make
+                sudo make install
+
+                 */
+                let build_dir = ".";
+                //run_command("git",&["clone","https://github.com/libsdl-org/SDL_mixer.git"])?; // clone
+                run_command("ls", &[])?;
+                run_command("cd", &["SDL_mixer"])?;
+                run_command("mkdir", &["build"])?; 
+                run_command("cd", &["build"])?; 
+                run_command("cmake", &[".."])?; 
+                run_command("make", &[])?; 
+                run_command("sudo", &["make", "install"])?; 
+                
+
             }
             _ => println!("Platform not supported."),
         }

@@ -3,6 +3,7 @@ mod file;
 mod services;
 mod platform;
 mod installation;
+mod command;
 use clap::{Parser, Subcommand};
 use file::{cleanup, init,clean_lib,DEST_DIR};
 use package::{init_package,get_lib, update_package, update_lib,LibTag, SdlConfig,get_sdl_config,check_libs};

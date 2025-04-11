@@ -9,13 +9,15 @@ use std::fs;
 use std::process;
 use std::path::PathBuf;
 
-pub const TMP_PATH: &str = ".\\tmp\\";
+pub fn tmp_path() -> &'static Path {
+    Path::new("./tmp")
+}
 pub const DEST_DIR: &str = ".";
 
-#[macro_export] // Make macro to use tmp_path for all files
+#[macro_export] // Make macro to use tmp_path() for all files
 macro_rules! path {
     ($($seg:expr),+ $(,)?) => {{
-        let mut p = std::path::PathBuf::from(crate::file::TMP_PATH);
+        let mut p = std::path::PathBuf::from(crate::file::tmp_path());
         $( p.push($seg); )+
         p
     }};
@@ -33,7 +35,7 @@ fn create_dir_if_not_exists(path: &str) {
 }
 
 pub fn init() -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(TMP_PATH)?;
+    std::fs::create_dir_all(tmp_path())?;
     create_dir_if_not_exists(DEST_DIR);
     create_dir_if_not_exists(&format!("{}/include", DEST_DIR));
     create_dir_if_not_exists(&format!("{}/lib", DEST_DIR));
@@ -42,8 +44,8 @@ pub fn init() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn cleanup() -> Result<(), Box<dyn std::error::Error>> {
-    if Path::new(TMP_PATH).exists() {
-        std::fs::remove_dir_all(TMP_PATH)?;
+    if Path::new(tmp_path()).exists() {
+        std::fs::remove_dir_all(tmp_path())?;
     }
     Ok(())
 }

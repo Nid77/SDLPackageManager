@@ -1,6 +1,6 @@
 use std::process::{Command, exit};
 
-fn run_command(command: &str, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run_command(command: &str, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::new(command)
         .args(args)
         .output()?;
@@ -10,7 +10,8 @@ fn run_command(command: &str, args: &[&str]) -> Result<(), Box<dyn std::error::E
         eprintln!("Error output: {}", String::from_utf8_lossy(&output.stderr));
         return Err("Command execution failed".into());
     }
-    println!("Output: {}", String::from_utf8_lossy(&output.stdout));
-
+    if !output.stdout.is_empty() {
+        println!("Command output: {}", String::from_utf8_lossy(&output.stdout));
+    }
     Ok(())
 }
