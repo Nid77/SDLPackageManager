@@ -18,15 +18,17 @@ impl Platform {
             Platform::Unknown
         }
     }
+
+    pub fn get_architecture() -> String {
+        let arch = if cfg!(target_arch = "x86_64") {
+            "x64".to_string()
+        } else {
+            "x86".to_string()
+        };
+        arch
+    }
 }
 
-pub fn get_architecture() -> String {
-    let arch = if cfg!(target_arch = "x86_64") {
-        "x64".to_string()
-    } else {
-        "x86".to_string()
-    };
-    arch
-}
+
 
 
