@@ -31,7 +31,7 @@ pub trait FileManager {
     fn download_and_extract(&self, url: &str, file: &str, extract_dir: &str) -> Result<(), Box<dyn std::error::Error>>;
 }
 
-fn create_dir_if_not_exists(path: &str) {
+pub fn create_dir_if_not_exists(path: &str) {
     if !Path::new(path).exists() {
         fs::create_dir_all(path).unwrap_or_else(|err| {
             eprintln!("Erreur de création de répertoire: {}", err);
@@ -42,10 +42,16 @@ fn create_dir_if_not_exists(path: &str) {
 
 pub fn init() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(tmp_path())?;
+    Ok(())
+}
+
+pub fn init_dir(only: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
     create_dir_if_not_exists(DEST_DIR);
-    create_dir_if_not_exists(&format!("{}/include", DEST_DIR));
-    create_dir_if_not_exists(&format!("{}/lib", DEST_DIR));
-    create_dir_if_not_exists(&format!("{}/bin", DEST_DIR));
+    for dir in only {
+        create_dir_if_not_exists(&format!("{}/{}", DEST_DIR,tmp_path().to_str().unwrap()));
+        println!("Created {} directory.", dir);
+    }
+
     Ok(())
 }
 
@@ -56,10 +62,12 @@ pub fn cleanup() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn clean_lib() -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::remove_dir_all(&format!("{}/bin", DEST_DIR))?;
-    std::fs::remove_dir_all(&format!("{}/lib", DEST_DIR))?;
-    std::fs::remove_dir_all(&format!("{}/include", DEST_DIR))?;
+pub fn clean_dir(only: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    for dir in only {
+        if Path::new(&(path!(dir))).exists() {
+            std::fs::remove_dir_all(format!("{}/{}", DEST_DIR, dir.to_string().to_lowercase()))?;
+        }
+    }
     Ok(())
 }
 
@@ -115,7 +123,12 @@ pub fn copy_dir_recursive(src: &str, dest: &str) -> Result<(), Box<dyn Error>> {
 
 impl FileManager for SdlInstallation {
     fn download_and_extract(&self, url: &str, file: &str, extract_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
-        if Path::new(&(path!(extract_dir))).exists() {
+        let dir = if extract_dir.is_empty() {
+            file.rsplit('.').next().unwrap_or(file)
+        } else {
+            extract_dir
+        };
+        if Path::new(&(path!(dir))).exists() {
             println!("Directory {:?} already exists", path!(extract_dir));
             return Ok(())
         } 
@@ -163,8 +176,8 @@ pub fn copy_dll(extract_dir: &str, name_sdl: &str) -> Result<(), Box<dyn std::er
 }
 
 pub fn copy_include(extract_dir: &str, true_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let include_src = PathBuf::from(format!("{extract_dir}-VC"))
-        .join(true_name)
+    let include_src = PathBuf::from(extract_dir)
+        .join(&true_name)
         .join("include");
     let include_dst = PathBuf::from(DEST_DIR);
 
@@ -177,7 +190,7 @@ pub fn copy_include(extract_dir: &str, true_name: &str) -> Result<(), Box<dyn st
 }
 
 pub fn copy_lib(extract_dir: &str, true_name: &str, arch: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let lib_src = PathBuf::from(format!("{extract_dir}-VC"))
+    let lib_src = PathBuf::from(extract_dir)
         .join(true_name)
         .join("lib")
         .join(arch);

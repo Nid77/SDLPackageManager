@@ -5,7 +5,7 @@ mod platform;
 mod installation;
 mod command;
 use clap::{Parser, Subcommand};
-use file::{cleanup, init,clean_lib,DEST_DIR};
+use file::{clean_dir, DEST_DIR};
 use package::{init_package,get_lib, update_package, update_lib,LibTag, SdlConfig,get_sdl_config,check_libs};
 use crate::installation::{SdlInstallation,Installable};
 use crate::services::get_latest_release;
@@ -75,16 +75,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             install(param)?;
         }
         Commands::Clean { only } => {
-            if only.is_empty() {
-                clean_lib()?;
-                println!("Cleaned all libs.");
-            } else {
-                for dir in only  {
-                    std::fs::remove_dir_all(format!("{}/{}", DEST_DIR, dir.to_string().to_lowercase()))?;
-                    println!("Cleaned {}.", dir.to_string().to_lowercase());
-                }
-            }
-            
+            let mut dirs = vec![
+                LibTag::Include,
+                LibTag::Lib,
+                LibTag::Bin,
+            ];
+            if !only.is_empty() {
+                dirs = only;
+            } 
+            clean_dir(&dirs.iter().map(|d| d.to_str()).collect())?;  
+            println!("Cleaned directories");        
         }
         Commands::Update { lib } => {
             let mut libs: SdlConfig = get_sdl_config();
@@ -128,9 +128,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 pub fn install(param: SdlInstallation) -> Result<(), Box<dyn std::error::Error>> {
     check_libs(&param.libs)?;
-    init()?;
+    param.init()?;
     param.install()?;
-    cleanup()?;
+    //param.clean()?;
     Ok(())
 }
 

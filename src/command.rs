@@ -11,7 +11,6 @@ const INTERNAL_COMMANDS: &[&str] = &[
 ];
 
 pub fn run_command(command: &str, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Running command: {} {:?}", command, args);
     if command == "cd" {
         std::env::set_current_dir(args[0])?;
         return Ok(());
@@ -55,10 +54,10 @@ fn check_command(command: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-pub fn check_commands(cm_list: &[(&str, &[&str])]) -> Result<i32, Box<dyn Error>> {
+pub fn check_commands(cm_list: &[&str]) -> Result<i32, Box<dyn Error>> {
     let mut cache: HashMap<&str, bool> = HashMap::new();
     let mut num = 0;
-    for &(command, _) in cm_list {
+    for &command in cm_list.iter() {
         if !cache.get(command).copied().unwrap_or(false) {
             match check_command(command){
                 Ok(_) => {

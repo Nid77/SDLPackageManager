@@ -31,6 +31,16 @@ pub enum LibTag {
     Lib,
 }
 
+impl LibTag {
+    pub fn to_str(&self) -> String {
+        match self {
+            LibTag::Bin => "bin".to_string(),
+            LibTag::Include => "include".to_string(),
+            LibTag::Lib => "lib".to_string(),
+        }
+    }
+}
+
 pub const SUPPORTED_LIBS: &[&str] = &[
     "SDL",
     "SDL_image",
